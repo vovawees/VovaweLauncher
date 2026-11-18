@@ -1,0 +1,30 @@
+# Environments & Secrets
+.env
+.env.local
+.venv/
+env/
+venv/
+ENV/
+
+# Python artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Databases & local state
+data/*.db
+data/*.db-wal
+data/*.db-shm
+
+# Client files (heavy jars, natives, downloads)
+data/client_files/*
+!data/client_files/.gitkeep
+
+# OS & Editor
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db

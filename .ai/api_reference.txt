@@ -1,0 +1,162 @@
+VOVAWELAUNCHER / DEAD MILE '96 API REFERENCE
+
+BASE URL:
+http://130.61.29.17:8000
+
+AUTHENTICATION HEADERS:
+Client endpoints require:
+Authorization: Bearer <session_token>
+
+Internal endpoints require:
+X-Internal-Key: <INTERNAL_API_KEY>
+
+RESPONSE FORMAT:
+Success:
+{
+  "ok": true,
+  "data": { ... },
+  "message": "...",
+  "status_code": 200
+}
+
+Error:
+{
+  "ok": false,
+  "error": {
+    "code": "ERROR_CODE",
+    "message": "Human readable error message",
+    "details": { ... }
+  },
+  "status_code": 400
+}
+
+ENDPOINTS LIST:
+
+1. Health & Docs
+GET /health -> {"ok": true, "data": {"status": "alive"}}
+GET /docs -> Swagger UI documentation
+GET /openapi.json -> OpenAPI 3.1 specification
+
+2. Static Client Downloads
+GET /files/<path> -> Direct download of client file (e.g. /files/mods/jei.jar)
+
+3. Auth (/api/v1/auth)
+POST /api/v1/auth/tg/init
+  Request: {"purpose": "register"} or {"purpose": "reset_pw"}
+  Response: {"token": "reg_...", "bot_url": "https://t.me/BotName?start=reg_...", "expires_in": 600}
+
+GET /api/v1/auth/tg/poll?token=reg_...
+  Response: {"status": "verified" | "pending" | "expired", "verified": true/false, "tg_username": "..."}
+
+POST /api/v1/auth/register
+  Request: {
+    "reg_token": "reg_...",
+    "username": "SurvivorName",
+    "password": "Password123",
+    "device": {
+      "hwid_hash": "...",
+      "os_name": "linux",
+      "os_version": "...",
+      "arch": "x86_64",
+      "cpu_info": "...",
+      "gpu_name": "...",
+      "gfx_backend": "vulkan",
+      "ram_total_mb": 16384,
+      "launcher_version": "0.1.0",
+      "launcher_hash": "..."
+    }
+  }
+  Response: {
+    "session_token": "dm_...",
+    "expires_at": 1731999999,
+    "user": {"id": 1, "account_uuid": "...", "username": "SurvivorName", "role": "player"}
+  }
+
+POST /api/v1/auth/login
+  Request: {"username": "SurvivorName", "password": "...", "device": {...}}
+  Response: {"session_token": "dm_...", "expires_at": ..., "user": {...}}
+
+POST /api/v1/auth/reset-password
+  Request: {"reset_token": "rst_...", "new_password": "..."}
+
+POST /api/v1/auth/logout [Auth Required]
+
+4. Profile (/api/v1/profile)
+GET /api/v1/profile/me [Auth Required]
+  Response: {
+    "id": 1,
+    "account_uuid": "...",
+    "username": "SurvivorName",
+    "role": "player",
+    "tg_username": "...",
+    "nick_change_available": true,
+    "nick_cooldown_remaining_sec": 0,
+    "login_count": 5,
+    "nick_history": [...]
+  }
+
+POST /api/v1/profile/nick [Auth Required]
+  Request: {"new_username": "NewNick"}
+
+5. Game (/api/v1/game)
+GET /api/v1/game/status
+  Response: {
+    "online": true,
+    "maintenance": false,
+    "players_online": 3,
+    "players_max": 20,
+    "ping_ms": 1,
+    "mc_version": "1.21.1",
+    "motd": "Create Aeronautics | NeoForge",
+    "client_version": "0.9.6",
+    "launcher_latest_version": "0.1.0"
+  }
+
+GET /api/v1/game/news
+  Response: {"items": [{"id": 1, "badge": "ПАТЧ 0.9.6", "badge_type": "default", "title": "...", "items": [...]}]}
+
+GET /api/v1/game/manifest?os=all|linux|win32
+  Supports ETag caching (returns 304 Not Modified if unchanged)
+  Response: {
+    "client_version": "0.9.6",
+    "mc_version": "1.20.1",
+    "forge_version": "47.3.0",
+    "manifest_hash": "...",
+    "files_base_url": "http://130.61.29.17:8000/files",
+    "files": [
+      {"path": "mods/example.jar", "size": 12345, "sha256": "...", "os": "all", "optional": null, "strict": true}
+    ]
+  }
+
+POST /api/v1/game/ticket [Auth Required]
+  Request: {
+    "ram_mb": 6144,
+    "os_name": "linux",
+    "gfx_backend": "vulkan",
+    "launcher_version": "0.1.0",
+    "launcher_hash": "...",
+    "modpack_hash": "...",
+    "hwid_hash": "..."
+  }
+  Response: {
+    "game_ticket": "dmgt_...",
+    "expires_in": 120,
+    "username": "SurvivorName",
+    "account_uuid": "...",
+    "offline_uuid": "...",
+    "mc_connect": "127.0.0.1:25565"
+  }
+
+6. Security & Telemetry (/api/v1)
+GET /api/v1/security/launcher-policy
+GET /api/v1/plugins/registry
+POST /api/v1/security/challenge [Auth Required]
+POST /api/v1/security/attest [Auth Required]
+POST /api/v1/telemetry/event [Auth Required]
+
+7. Internal & MC Mod (/api/v1/internal) [X-Internal-Key Required]
+POST /api/v1/internal/mc/verify-join
+POST /api/v1/internal/mc/event
+GET /api/v1/internal/mc/player/{identifier}
+POST /api/v1/internal/mc/ban
+POST /api/v1/internal/manifest/reload

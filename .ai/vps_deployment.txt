@@ -1,0 +1,34 @@
+VPS DEPLOYMENT INFO:
+Host: 130.61.29.17 (Oracle Cloud Infrastructure, eu-frankfurt-1)
+Private IP: 10.0.0.81
+OS: Oracle Linux 9.8 aarch64 (ARM64, 4 OCPU, 24 GB RAM, 200 GB NVMe)
+User: opc (sudo without password)
+Isolation Directory: /home/opc/ai_workspace/vovawelauncher/
+Virtualenv: /home/opc/ai_workspace/vovawelauncher/.venv (Python 3.11/3.12)
+Systemd Unit: /etc/systemd/system/vovawelauncher_api.service
+Systemd Service Name: vovawelauncher_api.service
+
+NETWORK & PORTS:
+- Port 8000/tcp: API Server (FastAPI + Uvicorn), bound to 0.0.0.0:8000
+- Open in Firewalld: Yes (sudo firewall-cmd --permanent --add-port=8000/tcp)
+- Open in OCI Security List: Yes (ocid1.securitylist.oc1.eu-frankfurt-1.aaaaaaaae7cx7wsutjjracspbbmscamws65astxypahyitj2i6oycjowy5fq)
+- Port 25565/tcp & udp: Minecraft Server (local ping targets 127.0.0.1:25565)
+
+ENVIRONMENT CONFIG (/home/opc/ai_workspace/vovawelauncher/.env):
+- HOST=0.0.0.0
+- PORT=8000
+- FILES_BASE_URL=http://130.61.29.17:8000/files
+- DB_PATH=data/deadmile96.db
+- MANIFEST_PATH=data/manifest.json
+- CLIENT_FILES_DIR=data/client_files
+- MC_HOST=127.0.0.1
+- MC_PORT=25565
+
+COMMANDS:
+- Check service: sudo systemctl status vovawelauncher_api.service
+- Restart service: sudo systemctl restart vovawelauncher_api.service
+- View logs: sudo journalctl -u vovawelauncher_api.service -f -n 100
+- Healthcheck: curl http://127.0.0.1:8000/health
+- Rebuild manifest after adding client files:
+  cd /home/opc/ai_workspace/vovawelauncher && .venv/bin/python tools/build_manifest.py
+  curl -X POST http://127.0.0.1:8000/api/v1/internal/manifest/reload -H "X-Internal-Key: <key>"

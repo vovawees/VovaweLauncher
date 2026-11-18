@@ -1,0 +1,70 @@
+GUIDE TO BUILDING THE VOVAWELAUNCHER CLIENT
+
+1. OVERVIEW OF CLIENT LIFECYCLE:
+The launcher performs the following phases:
+  Step 1: Check server health and ping (/health, /api/v1/game/status)
+  Step 2: Authenticate user (Telegram QR/deep-link -> /api/v1/auth/tg/init -> poll -> register OR /api/v1/auth/login)
+  Step 3: Load user profile & news (/api/v1/profile/me, /api/v1/game/news)
+  Step 4: Fetch manifest (/api/v1/game/manifest?os=linux или os=win32)
+  Step 5: File verification & sync (compare local sha256 with manifest; download missing/corrupted from files_base_url)
+  Step 6: Security challenge attestation (optional /api/v1/security/challenge)
+  Step 7: Obtain game ticket (/api/v1/game/ticket)
+  Step 8: Construct Minecraft Forge launch arguments and spawn game process
+
+2. TELEGRAM REGISTRATION FLOW:
+1. User clicks "Register via Telegram" in launcher UI.
+2. Launcher generates HWID: SHA-256(CPU + Motherboard UUID + MAC / MachineID).
+3. POST http://130.61.29.17:8000/api/v1/auth/tg/init with body: {"purpose": "register"}
+4. Launcher receives:
+   {
+     "token": "reg_...",
+     "bot_url": "https://t.me/DeadMile96Bot?start=reg_...",
+     "expires_in": 600
+   }
+5. Launcher displays QR code or opens browser with bot_url.
+6. Launcher polls GET /api/v1/auth/tg/poll?token=reg_... every 2-3 seconds.
+7. Once response has "verified": true, launcher shows username & password input fields.
+8. User inputs nickname (3-16 chars, [a-zA-Z0-9_]) and password (>= 6 chars).
+9. Launcher sends POST /api/v1/auth/register with {reg_token, username, password, device}.
+10. Launcher stores session_token securely.
+
+3. LOGIN FLOW (EXISTING USER):
+1. User enters username and password.
+2. Launcher sends POST /api/v1/auth/login with {username, password, device}.
+3. Stores returned session_token.
+
+4. SYNCING GAME FILES (MODPACK):
+1. Launcher calls GET /api/v1/game/manifest?os=linux (or win32).
+   Use If-None-Match header with last received ETag to avoid re-downloading identical manifests (returns 304).
+2. For each file in manifest.files:
+   - Check local file at <game_dir>/<file.path>
+   - If missing or sha256 != file.sha256, add to download queue.
+3. For each file in download queue:
+   - Download from `${manifest.files_base_url}/${file.path}`
+   - Verify SHA-256 checksum after download.
+4. If file is in "strict_dirs" (e.g. "mods/"), remove any local files in mods/ that are NOT listed in manifest.files.
+
+5. LAUNCHING MINECRAFT:
+1. Launcher requests game ticket:
+   POST /api/v1/game/ticket
+   Headers: Authorization: Bearer <session_token>
+   Body: {"ram_mb": 6144, "os_name": "linux", "gfx_backend": "vulkan", "launcher_version": "0.1.0"}
+2. Server returns:
+   {
+     "game_ticket": "dmgt_...",
+     "username": "SurvivorName",
+     "account_uuid": "...",
+     "offline_uuid": "...",
+     "mc_connect": "130.61.29.17:25565"
+   }
+3. Spawn Java process:
+   - JVM Flags: -Xms<ram_mb/2>M -Xmx<ram_mb>M -XX:+UseG1GC ...
+   - Game arguments:
+     --username <username>
+     --version <mc_version>
+     --gameDir <client_dir>
+     --assetsDir <assets_dir>
+     --assetIndex <asset_index>
+     --uuid <offline_uuid>
+     --accessToken <game_ticket>  (or custom argument passed to custom forge mod)
+     --quickPlayMultiplayer <mc_connect>

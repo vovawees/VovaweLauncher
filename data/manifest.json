@@ -1,0 +1,10 @@
+{
+  "client_version": "0.9.6",
+  "mc_version": "1.20.1",
+  "forge_version": "47.3.0",
+  "strict_dirs": [
+    "mods"
+  ],
+  "files_count": 0,
+  "files": []
+}

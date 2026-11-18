@@ -1,0 +1,14 @@
+PROJECT: VovaweLauncher (Dead Mile '96 Backend, Telegram Auth & Security API)
+REPO: https://github.com/vovawees/VovaweLauncher
+STACK: Python >= 3.11 (3.11/3.12), FastAPI, Uvicorn, aiosqlite (SQLite WAL mode), aiogram 3.13+, argon2-cffi, pydantic 2.9+, orjson
+
+ARCHITECTURE:
+- REST API: FastAPI with ORJSONResponse, centralized error handler, rate limiters per IP/action, CORS enabled.
+- Database: SQLite (data/deadmile96.db) with WAL journal mode, busy_timeout=5000ms, mmap=256MB.
+- Auth system: Two-factor Telegram authentication. User registers by generating a link to Telegram bot, verifying in Telegram, and completing registration with username/password in launcher.
+- Game Ticket system: Launcher requests game ticket with HWID, RAM and launcher hash. Ticket is validated on game join by Forge mod / server plugin.
+- Minecraft Server Ping: Background async task pings local Minecraft server (127.0.0.1:25565) every 10s using Minecraft Server List Ping protocol (VarInt handshake + status) and caches live player count, max players, ping and MOTD.
+- News Feed: In-memory cached news with badges ('default', 'alert', 'detroit') and patch notes.
+- Client Files Distribution: Starlette StaticFiles mounted at /files, backed by data/client_files/. Manifest generated with tools/build_manifest.py.
+- Security & Anti-tamper: Challenge-response attestation (/security/challenge, /security/attest), telemetry events (/telemetry/event), and hardware ID (HWID) device tracking with trust scoring.
+- Admin & MC Mod API: Protected by X-Internal-Key header for MC Forge server mod and backend administration.
