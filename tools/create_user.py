@@ -2,7 +2,12 @@
 """CLI-утилита для быстрого создания пользователя/админа без Telegram-бота."""
 import argparse
 import asyncio
+import sys
 from pathlib import Path
+
+# Add project root to sys.path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
 from app.config import get_settings
 from app.core.security import hash_password, new_account_uuid, now_ts
 from app.db import Database
